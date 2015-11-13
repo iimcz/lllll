@@ -63,7 +63,42 @@ private:
 
 };
 
+struct position_t {
+	int32_t x;
+	int32_t y;
+	inline position_t& operator+=(const position_t& rhs)
+	{
+		x+=rhs.x;
+		y+=rhs.y;
+		return *this;
+	}
+	inline position_t& operator-=(const position_t& rhs)
+	{
+		x-=rhs.x;
+		y-=rhs.y;
+		return *this;
+	}
+};
 
+struct dimensions_t {
+	int32_t width;
+	int32_t height;
+};
+
+struct color_t {
+	uint8_t r;
+	uint8_t g;
+	uint8_t b;
+	uint8_t intensity;
+};
+
+
+inline position_t operator+(const position_t&p1, const position_t& p2)
+{
+	auto p = p1;
+	p+=p2;
+	return p;
+}
 
 
 }

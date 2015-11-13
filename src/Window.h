@@ -11,12 +11,14 @@
 #define WINDOW_H_
 #include "Log.h"
 #include "utils.h"
+#include "Light.h"
 #include <SDL.h>
+
 namespace iim {
 
 class Window {
 public:
-	Window(Log& log_);
+	Window(Log& log_, std::vector<std::string> args);
 	int run();
 private:
 	bool process_events();
@@ -25,6 +27,12 @@ private:
 	managed_resource<SDL_Window*> win_;
 	managed_resource<SDL_Renderer*> renderer_;
 	managed_resource<SDL_GLContext> ctx_;
+
+	std::vector<Light> lights_;
+
+	int32_t col_count_;
+	int32_t row_count_;
+	int32_t led_count_;
 };
 
 }

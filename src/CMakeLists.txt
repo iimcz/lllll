@@ -9,6 +9,9 @@ add_executable(lllll
 			Window.cpp Window.h
 			ArtNetPacket.cpp ArtNetPacket.h
 			Socket.cpp Socket.h
+			LED.cpp LED.h 
+			Light.cpp Light.h
+			jsoncpp.cpp
 			)
 
 include_directories(${SDL2_INCLUDE_DIRS})			

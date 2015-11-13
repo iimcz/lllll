@@ -9,11 +9,12 @@
 
 #include "Window.h"
 #include <iostream>
-int main(int /* argc */, char** /* argv */)
+int main(int argc, char** argv)
 {
+	std::vector<std::string> args(argv, argv + argc);
 	iim::Log log{std::clog};
 	log[iim::log_level::info] << "lllll Visualization starting ...";
-	iim::Window win{log};
+	iim::Window win{log, args};
 	win.run();
 	log[iim::log_level::info] << "lllll Visualization shutting down ...";
 }

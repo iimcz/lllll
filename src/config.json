@@ -1,0 +1,16 @@
+{
+	"window": {
+		"fullscreen": false,
+		"size": {
+			"x": 1920,
+			"y": 1080
+		}
+	},
+	"lights": {
+		"columns": 5,
+		"rows": 17,
+		"leds": 12 
+	}
+
+
+}

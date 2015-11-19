@@ -17,7 +17,8 @@ namespace iim {
 class Light {
 public:
 	Light(position_t position, size_t count, dimensions_t dim, position_t spacing)
-	:position_(position), spacing_(spacing) {
+	//:position_(position), spacing_(spacing)
+	{
 		leds_.reserve(count);
 		for (size_t i = 0; i < count; ++i) {
 			leds_.emplace_back(dim, position);
@@ -32,10 +33,12 @@ public:
 	color_t& operator[](size_t index) {
 		return leds_.at(index).color();
 	}
+
+	void set_from(uint8_t* start, uint8_t* end);
 private:
-	position_t position_;
+//	position_t position_;
 	std::vector<Led> leds_;
-	position_t spacing_;
+//	position_t spacing_;
 
 };
 

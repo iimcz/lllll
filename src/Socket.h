@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <array>
 #include <vector>
+#include "utils.h"
 
 namespace iim {
 
@@ -22,7 +23,10 @@ public:
 
 	template<typename T>
 	int send(const std::vector<T>& data)
-	{}
+	{
+		(void)data;
+		return 0;
+	}
 
 	template<typename T>
 	std::vector<T> receive() {
@@ -32,11 +36,23 @@ public:
 	template<typename T>
 	std::vector<T> receive(std::vector<T> initial)
 	{
+		auto len = recv_impl();
+		auto tlen = len / sizeof(T);
+		auto dstart = reinterpret_cast<T*>(&buffer_[0]);
+		initial.clear();
+		initial.reserve(tlen);
 
+		initial.insert(initial.begin(), dstart, dstart + tlen);
+		return std::move(initial);
 	}
 
+
+	bool data_available(uint32_t timeout_ms = 0);
 private:
+	int recv_impl();
+
 	std::array<uint8_t, 65535> buffer_;
+	managed_resource<int> fd_;
 };
 
 }

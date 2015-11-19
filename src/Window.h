@@ -12,9 +12,12 @@
 #include "Log.h"
 #include "utils.h"
 #include "Light.h"
+#include "Socket.h"
 #include <SDL.h>
 
 namespace iim {
+
+
 
 class Window {
 public:
@@ -29,10 +32,22 @@ private:
 	managed_resource<SDL_GLContext> ctx_;
 
 	std::vector<Light> lights_;
+	using address_t = std::pair<int, int>;
+//	// Maps [universe, channel] to [light number, channel]
+//	std::map<address_t, address_t> addresses_;
+
+	// Maps universe to a vector of [light_number, channel]
+	std::map<int, std::vector<address_t>> universes_;
 
 	int32_t col_count_;
 	int32_t row_count_;
 	int32_t led_count_;
+
+	int32_t dmx_max_;
+	int32_t dmx_offset_;
+
+	bool random_colors_;
+	Socket socket_;
 };
 
 }

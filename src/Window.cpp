@@ -10,13 +10,15 @@
 #include "Window.h"
 #include "SDL_version.h"
 #include "json_helpers.h"
+#include "ArtNetPacket.h"
 #include <random>
 #include <fstream>
 
 namespace iim {
 
 Window::Window(Log& log_, std::vector<std::string> args):
-		log(log_),col_count_(5),row_count_(17),led_count_(12)
+		log(log_),col_count_(5),row_count_(17),led_count_(12),
+		dmx_max_(511), dmx_offset_(48),random_colors_(false)
 {
 	Json::Value root;
 	if (args.size() > 1) {
@@ -27,7 +29,9 @@ Window::Window(Log& log_, std::vector<std::string> args):
 	col_count_ = get_nested_value_or_default(root, 5, "lights", "columns");
 	row_count_ = get_nested_value_or_default(root, 17, "lights", "rows");
 	led_count_ = get_nested_value_or_default(root, 12, "lights", "leds");
-
+	dmx_max_   = get_nested_value_or_default(root, 511, "lights", "dmx_max");
+	dmx_offset_= get_nested_value_or_default(root, 511, "lights", "dmx_offset");
+	random_colors_ = get_nested_value_or_default(root, false, "lights", "random");
 	SDL_version v;
 	SDL_GetVersion(&v);
 	log[log_level::info] << "Using SDL version " << int{v.major} << "." << int{v.minor} << "." << int{v.patch};
@@ -64,6 +68,8 @@ Window::Window(Log& log_, std::vector<std::string> args):
 	const auto col_offset = col_size / 2;
 	const auto row_size = h / row_count_;
 
+	int universe_num = 0;
+	int last_dmx = 0;
 	for (int x = 0; x < col_count_; ++x) {
 		for (int i = 0; i < row_count_; ++i) {
 			auto pos = position_t {	col_offset + x * col_size,
@@ -71,6 +77,14 @@ Window::Window(Log& log_, std::vector<std::string> args):
 			auto spacing = position_t{	0,
 										row_size / led_count_};
 			lights_.emplace_back(pos, led_count_, dimensions_t{8, 4}, spacing);
+			const auto light_num = i + x*row_count_;
+			log[log_level::info] << "Added light " << light_num << ", listening on universe " << universe_num << ", starting at address " << last_dmx;
+			universes_[universe_num].push_back({light_num, last_dmx});
+			last_dmx += dmx_offset_;
+			if (last_dmx + led_count_ * 4 > dmx_max_) {
+				++universe_num;
+				last_dmx = 0;
+			}
 		}
 	}
 	log[log_level::info] << "Generated " << lights_.size() << " lights";
@@ -91,6 +105,8 @@ bool Window::process_events()
 				} else if (event.key.keysym.sym == 'f') {
 //					window_fullscreen_ = !window_fullscreen_;
 //					SDL_SetWindowFullscreen(window_.get(), window_fullscreen_?SDL_WINDOW_FULLSCREEN_DESKTOP:0);
+				} else if (event.key.keysym.sym == 'r') {
+					random_colors_ = ! random_colors_;
 				} break;
 			case SDL_WINDOWEVENT:
 				switch (event.window.event) {
@@ -112,24 +128,51 @@ int Window::run()
 	std::uniform_int_distribution<> distrib2(0, led_count_ - 1);
 	std::uniform_int_distribution<uint8_t> dist_col(0, 255);
 
+	ArtNetPacket packet_;
+
 	while(process_events())
 	{
 		SDL_SetRenderDrawColor( renderer_.get(), 0, 0, 0, 255 );
 		SDL_RenderClear(renderer_.get());
+
+		while (socket_.data_available(5)) {
+			log[log_level::verbose] << "Data available!";
+			auto data = socket_.receive<uint8_t>();
+			log[log_level::verbose] << "Received " << data.size() << " bytes";
+			if (!ArtNetPacket::validate_packet(data)) {
+				log[log_level::warning] << "Received invalid ARTNet packet";
+				continue;
+			}
+			auto universe = ArtNetPacket::get_universe(data);
+			log[log_level::verbose] << "Received data for universe: " << universe;
+
+			for (auto& addr: universes_[universe]) {
+				if (data.size() <= static_cast<size_t>((addr.second + header_size))) {
+					continue;
+				}
+				lights_[addr.first].set_from(&data[0] + addr.second + header_size, &data[0] + data.size());
+			}
+
+
+		}
+
+
+
 		for (const auto& light: lights_) {
 			light.draw(*renderer_.get());
 		}
 
-		for (auto i = 0; i < 100; ++i) {
-			auto idx = distrib(gen);
-			auto idx2 = distrib2(gen);
-//			log[log_level::info] << "modifying light " << idx << ", light " << idx2;
-			auto& col = lights_[idx][idx2];
-			col.r = dist_col(gen);
-			col.g = dist_col(gen);
-			col.b = dist_col(gen);
-			col.intensity = dist_col(gen);
-
+		if (random_colors_) {
+			for (auto i = 0; i < 100; ++i) {
+				auto idx = distrib(gen);
+				auto idx2 = distrib2(gen);
+	//			log[log_level::info] << "modifying light " << idx << ", light " << idx2;
+				auto& col = lights_[idx][idx2];
+				col.r = dist_col(gen);
+				col.g = dist_col(gen);
+				col.b = dist_col(gen);
+				col.intensity = dist_col(gen);
+			}
 		}
 
 

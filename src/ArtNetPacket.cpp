@@ -91,7 +91,7 @@ bool ArtNetPacket::validate_packet(const std::vector<uint8_t>& data)
 	if (data.size() < header_size) return false;
 	if (!std::equal(data.cbegin(), data.cbegin()+8, default_artnet_header.cbegin())) return false;
 	const auto size = read_from_header_16(data, length_offset);
-	if (data.size() < header_size + size) return false;
+	if (data.size() < static_cast<size_t>(header_size + size)) return false;
 
 	return true;
 }

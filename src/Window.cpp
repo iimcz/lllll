@@ -32,15 +32,27 @@ Window::Window(Log& log_, std::vector<std::string> args):
 	dmx_max_   = get_nested_value_or_default(root, 511, "lights", "dmx_max");
 	dmx_offset_= get_nested_value_or_default(root, 511, "lights", "dmx_offset");
 	random_colors_ = get_nested_value_or_default(root, false, "lights", "random");
+
+	int width  = get_nested_value_or_default(root, 1920, "window", "size", "x");
+	int height = get_nested_value_or_default(root, 1920, "window", "size", "y");
+	bool fs    = get_nested_value_or_default(root, false, "window", "fullscreen");
+
+	auto led_size = dimensions_t{8, 4};
+	led_size.width = get_nested_value_or_default(root, led_size.width, "lights", "led_size", "width");
+	led_size.height= get_nested_value_or_default(root, led_size.height, "lights", "led_size", "height");
+
+	std::string address = get_nested_value_or_default(root, "0.0.0.0", "network", "address");
+	uint16_t port = get_nested_value_or_default(root, 6454, "network", "port");
+
+	socket_.bind(address, port);
+
 	SDL_version v;
 	SDL_GetVersion(&v);
 	log[log_level::info] << "Using SDL version " << int{v.major} << "." << int{v.minor} << "." << int{v.patch};
 
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE);
 
-	int width = get_nested_value_or_default(root, 1920, "window", "size", "x");
-	int height = get_nested_value_or_default(root, 1920, "window", "size", "y");
-	bool fs = get_nested_value_or_default(root, false, "window", "fullscreen");
+
 
 	win_ = {SDL_CreateWindow(
 				"lllll",
@@ -72,11 +84,11 @@ Window::Window(Log& log_, std::vector<std::string> args):
 	int last_dmx = 0;
 	for (int x = 0; x < col_count_; ++x) {
 		for (int i = 0; i < row_count_; ++i) {
-			auto pos = position_t {	col_offset + x * col_size,
+			auto pos = position_t {	col_offset + x * col_size - led_size.width / 2,
 									i * row_size};
 			auto spacing = position_t{	0,
 										row_size / led_count_};
-			lights_.emplace_back(pos, led_count_, dimensions_t{8, 4}, spacing);
+			lights_.emplace_back(pos, led_count_, led_size, spacing);
 			const auto light_num = i + x*row_count_;
 			log[log_level::info] << "Added light " << light_num << ", listening on universe " << universe_num << ", starting at address " << last_dmx;
 			universes_[universe_num].push_back({light_num, last_dmx});
@@ -129,6 +141,8 @@ int Window::run()
 	std::uniform_int_distribution<uint8_t> dist_col(0, 255);
 
 	ArtNetPacket packet_;
+	std::vector<uint8_t> data;
+	data.reserve(530);
 
 	while(process_events())
 	{
@@ -137,7 +151,8 @@ int Window::run()
 
 		while (socket_.data_available(5)) {
 			log[log_level::verbose] << "Data available!";
-			auto data = socket_.receive<uint8_t>();
+			// Reusing the temporary buffer
+			data = socket_.receive<uint8_t>(std::move(data));
 			log[log_level::verbose] << "Received " << data.size() << " bytes";
 			if (!ArtNetPacket::validate_packet(data)) {
 				log[log_level::warning] << "Received invalid ARTNet packet";

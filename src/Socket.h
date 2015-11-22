@@ -48,6 +48,7 @@ public:
 
 
 	bool data_available(uint32_t timeout_ms = 0);
+	bool bind(const std::string& address, uint16_t port);
 private:
 	int recv_impl();
 

@@ -36,18 +36,25 @@ Socket::Socket()
 	 }
 #endif
 
+
+
+
+}
+
+bool Socket::bind(const std::string& address, uint16_t port)
+{
 	 const addrinfo hints = {AI_PASSIVE, AF_INET, SOCK_DGRAM, 0, 0, nullptr, nullptr, nullptr};
 	 managed_resource<addrinfo *> info = {nullptr, [](addrinfo* i){if(i)freeaddrinfo(i);}};
-	 const char* addr = nullptr;//"0.0.0.0";
-	 	/* int ret = */ ::getaddrinfo(addr,
-	 					"6454",
+	 auto sport = std::to_string(port);
+	 auto* addr = address.c_str();
+		/* int ret = */ ::getaddrinfo(addr,
+						sport.c_str(),
 					   &hints,
 					   &(info.get()));
 	if (::bind(fd_.get(), info.get()->ai_addr, info.get()->ai_addrlen) < 0) {
 		throw std::runtime_error(std::string{"Failed to bind socket: "} + std::strerror(errno));
 	}
-
-
+	return true;
 }
 
 bool Socket::data_available(uint32_t timeout_ms)

@@ -6,13 +6,21 @@
 			"y": 1080
 		}
 	},
+	"network": {
+		"address": "0.0.0.0",
+		"port": 6454
+	},
 	"lights": {
 		"columns": 5,
 		"rows": 17,
 		"leds": 12,
 		"random": false,
 		"dmx_max": 512,
-		"dmx_offset": 50 
+		"dmx_offset": 50,
+		"led_size": {
+			"width": 16,
+			"height": 4
+		} 
 	}
 
 

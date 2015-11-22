@@ -49,6 +49,12 @@ std::string get_nested_value_or_default(const Json::Value& root, const std::stri
 }
 
 template<class... Ts>
+std::string get_nested_value_or_default(const Json::Value& root, const char* def_value, Ts... idxs)
+{
+	return (get_nested_value_or_default(root, std::string{def_value}, idxs...));
+}
+
+template<class... Ts>
 bool get_nested_value_or_default(const Json::Value& root, const bool& def_value, Ts... idxs)
 {
 	try {

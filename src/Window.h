@@ -47,6 +47,7 @@ private:
 	int32_t dmx_offset_;
 
 	bool random_colors_;
+	bool new_universe_for_columns_;
 	Socket socket_;
 };
 

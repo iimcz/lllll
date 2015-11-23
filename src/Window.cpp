@@ -32,6 +32,7 @@ Window::Window(Log& log_, std::vector<std::string> args):
 	dmx_max_   = get_nested_value_or_default(root, 511, "lights", "dmx_max");
 	dmx_offset_= get_nested_value_or_default(root, 50, "lights", "dmx_offset");
 	random_colors_ = get_nested_value_or_default(root, false, "lights", "random");
+	new_universe_for_columns_ = get_nested_value_or_default(root, true, "lights", "column_new_universe");
 
 	int width  = get_nested_value_or_default(root, 1920, "window", "size", "x");
 	int height = get_nested_value_or_default(root, 1080, "window", "size", "y");
@@ -84,6 +85,10 @@ Window::Window(Log& log_, std::vector<std::string> args):
 	int universe_num = 0;
 	int last_dmx = 0;
 	for (int x = 0; x < col_count_; ++x) {
+		if (new_universe_for_columns_ && last_dmx != 0) {
+			last_dmx = 0;
+			++universe_num;
+		}
 		for (int i = 0; i < row_count_; ++i) {
 			auto pos = position_t {	col_offset + x * col_size - led_size.width / 2,
 									i * row_size};

@@ -30,11 +30,11 @@ Window::Window(Log& log_, std::vector<std::string> args):
 	row_count_ = get_nested_value_or_default(root, 17, "lights", "rows");
 	led_count_ = get_nested_value_or_default(root, 12, "lights", "leds");
 	dmx_max_   = get_nested_value_or_default(root, 511, "lights", "dmx_max");
-	dmx_offset_= get_nested_value_or_default(root, 511, "lights", "dmx_offset");
+	dmx_offset_= get_nested_value_or_default(root, 50, "lights", "dmx_offset");
 	random_colors_ = get_nested_value_or_default(root, false, "lights", "random");
 
 	int width  = get_nested_value_or_default(root, 1920, "window", "size", "x");
-	int height = get_nested_value_or_default(root, 1920, "window", "size", "y");
+	int height = get_nested_value_or_default(root, 1080, "window", "size", "y");
 	bool fs    = get_nested_value_or_default(root, false, "window", "fullscreen");
 
 	auto led_size = dimensions_t{8, 4};
@@ -53,7 +53,7 @@ Window::Window(Log& log_, std::vector<std::string> args):
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE);
 
 
-
+	log[log_level::info] << "Creating window " << width <<"x" << height;
 	win_ = {SDL_CreateWindow(
 				"lllll",
 				SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
@@ -76,6 +76,7 @@ Window::Window(Log& log_, std::vector<std::string> args):
 
 	int w = 0, h = 0;
 	SDL_GetWindowSize(win_.get(), &w, &h);
+	log[log_level::info] << "Real window size " << w <<"x" << h;
 	const auto col_size = w / col_count_;
 	const auto col_offset = col_size / 2;
 	const auto row_size = h / row_count_;

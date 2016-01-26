@@ -14,6 +14,14 @@ int main(int argc, char** argv)
 	std::vector<std::string> args(argv, argv + argc);
 	iim::Log log{std::clog};
 	log[iim::log_level::info] << "lllll Visualization starting ...";
+	{
+		auto res = iim::Light::list_registered();
+		auto ll = log[iim::log_level::info];
+		ll << "Registered light types: ";
+		for (const auto& l: res) {
+			ll << l << ", ";
+		}
+	}
 	iim::Window win{log, args};
 	win.run();
 	log[iim::log_level::info] << "lllll Visualization shutting down ...";

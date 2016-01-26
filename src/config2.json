@@ -1,0 +1,104 @@
+{
+	"window": {
+		"fullscreen": false,
+		"size": {
+			"x": 3840,
+			"y": 2160
+		},
+		"background": {
+			"r": 0,
+			"g": 25,
+			"b": 50
+		}
+	},
+	"scene": {
+		"width": 25,
+		"height": 18
+	},
+	"network": {
+		"address": "0.0.0.0",
+		"port": 6454
+	},
+	"lights": [
+		{
+			"type" :"dimmed",
+			"artnet": {
+				"universe": 0,
+				"channel": 0	
+			},
+			
+			"position": {
+				"x": 0,
+				"y": 0
+			}
+		},
+		{
+			"type" :"elar",
+			"artnet": {
+				"universe": 0,
+				"channel": 0	
+			},
+			
+			"position": {
+				"x": -10,
+				"y": -8
+			}
+		},
+		{
+			"type" :"elar",
+			"artnet": {
+				"universe": 0,
+				"channel": 51
+			},
+			"position": {
+				"x": -10,
+				"y": -7
+			}
+		},
+		{
+			"type" :"elar",
+			"artnet": {
+				"universe": 0,
+				"channel": 102
+			},
+			"position": {
+				"x": -10,
+				"y": -6
+			}
+		},
+		{
+			"type" :"elar",
+			"artnet": {
+				"universe": 0,
+				"channel": 153
+			},
+			"position": {
+				"x": -10,
+				"y": -4
+			}
+		},
+		{
+			"type" :"elar",
+			"artnet": {
+				"universe": 0,
+				"channel": 204
+			},
+			"position": {
+				"x": -10,
+				"y": -3
+			}
+		},
+		{
+			"type" :"elar",
+			"artnet": {
+				"universe": 0,
+				"channel": 255
+			},
+			"position": {
+				"x": -10,
+				"y": -2
+			}
+		}
+	]
+		
+}

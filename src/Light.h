@@ -10,35 +10,42 @@
 #ifndef LIGHT_H_
 #define LIGHT_H_
 
-#include "LED.h"
+#include "utils.h"
+#include "json_helpers.h"
+#include "light_source.h"
 #include <vector>
+#include <functional>
+#include <memory>
+
+
 namespace iim {
 
 class Light {
 public:
-	Light(position_t position, size_t count, dimensions_t dim, position_t spacing)
-	//:position_(position), spacing_(spacing)
-	{
-		leds_.reserve(count);
-		for (size_t i = 0; i < count; ++i) {
-			leds_.emplace_back(dim, position);
-			position += spacing;
-		}
+	Light(const Json::Value& root);
+	virtual ~Light() noexcept = default;
 
-	}
-	~Light() noexcept = default;
+	virtual void render_points(std::vector<light_source_t>& sources) const = 0;
+	virtual void set_artnet(const uint8_t* start, const uint8_t* end) = 0;
 
-	void draw(SDL_Renderer& renderer) const;
+	virtual size_t get_universe() const { return universe_; }
+	virtual size_t get_channel() const { return artnet_channel_; }
 
-	color_t& operator[](size_t index) {
-		return leds_.at(index).color();
-	}
+	using light_ptr = std::unique_ptr<Light>;
+	using light_generator = std::function<light_ptr(const Json::Value&)>;
 
-	void set_from(uint8_t* start, uint8_t* end);
+	static bool register_light(std::string name, light_generator generator);
+	static light_ptr generate_light(const std::string& name, const Json::Value& root);
+	static light_ptr generate_light(const Json::Value& root);
+
+	static std::vector<std::string> list_registered();
+protected:
+	position_t position_;
+
 private:
-//	position_t position_;
-	std::vector<Led> leds_;
-//	position_t spacing_;
+	size_t universe_;
+	size_t artnet_channel_;
+
 
 };
 

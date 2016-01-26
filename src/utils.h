@@ -64,8 +64,15 @@ private:
 };
 
 struct position_t {
-	int32_t x;
-	int32_t y;
+	position_t() noexcept :x{0.0},y{0.0},z{0.0} {}
+	position_t(float x, float y, float z = 0.0) noexcept
+			:x{x},y{y},z{z} {}
+
+
+	float x;
+	float y;
+	float z;
+
 	inline position_t& operator+=(const position_t& rhs)
 	{
 		x+=rhs.x;
@@ -81,8 +88,8 @@ struct position_t {
 };
 
 struct dimensions_t {
-	int32_t width;
-	int32_t height;
+	float width;
+	float height;
 };
 
 struct color_t {

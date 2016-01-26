@@ -8,29 +8,57 @@
  */
 
 #include "Light.h"
-
+#include <unordered_map>
+#include <algorithm>
 namespace iim {
 
-void Light::draw(SDL_Renderer& renderer) const
+namespace {
+
+std::unordered_map<std::string, Light::light_generator> generators;
+}
+bool Light::register_light(std::string name, light_generator generator)
 {
-	for (const auto& led: leds_) {
-		led.draw(renderer);
-	}
+	return generators.emplace(std::move(name), std::move(generator)).second;
 }
 
-void Light::set_from(uint8_t* start, uint8_t* end)
+Light::light_ptr Light::generate_light(const std::string& name, const Json::Value& root)
 {
-	size_t led = 0;
-	while (start < (end-4) && led < leds_.size()) {
-		auto& l = leds_[led++];
-		l.color().r=*start++;
-		l.color().g=*start++;
-		l.color().b=*start++;
-		l.color().intensity = *start++;
+	auto it = generators.find(name);
+	if (it == generators.end()) {
+		throw std::runtime_error("Generator not found for "+name);
 	}
+	return it->second(root);
+}
 
+Light::light_ptr Light::generate_light(const Json::Value& root)
+{
+	auto type = get_nested_value_or_default(root, "", "type");
+	if (type.empty()) {
+		throw std::runtime_error("Light specification is missing type");
+	}
+	return generate_light(type, root);
+}
+
+std::vector<std::string> Light::list_registered()
+{
+	std::vector<std::string> res;
+	std::transform(generators.begin(), generators.end(), std::back_inserter(res),
+			[](const auto& a){return a.first;});
+	return res;
+}
+Light::Light(const Json::Value& root)
+	:position_{
+		static_cast<float>(get_nested_value_or_default(root, 0.0f, "position", "x")),
+		static_cast<float>(get_nested_value_or_default(root, 0.0f, "position", "y")),
+		static_cast<float>(get_nested_value_or_default(root, 0.0f, "position", "z"))}
+	,universe_{static_cast<size_t>(get_nested_value_or_default(root, 0,   "artnet", "universe"))}
+	,artnet_channel_{static_cast<size_t>(get_nested_value_or_default(root, 0,   "artnet", "channel"))}
+{
 
 }
+
+
+
 }
 
 

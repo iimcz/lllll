@@ -1,0 +1,97 @@
+const std::string default_vs = R"XXX( 
+
+#version 400
+
+layout(location = 0) in vec3 in_Position;
+layout(location = 1) in float in_Radius;
+layout(location = 2) in vec4 in_color;
+ 
+uniform float scene_width = 1.0;
+uniform float scene_height = 1.0;
+
+out VertexData {
+  vec2 radius;
+  vec4 color;
+} data_out;
+
+void main(void) {
+    gl_Position = vec4(2*in_Position.x/scene_width, 2*in_Position.y/scene_height, 0.0, 1.0);
+    data_out.radius = vec2(2*in_Radius/scene_width, 2*in_Radius/scene_height);
+    data_out.color = in_color;
+}
+
+
+)XXX";
+
+
+const std::string default_gs = R"XXX( 
+
+#version 400
+layout(points) in;
+//layout(triangle_strip, max_vertices = 3) out;
+layout(triangle_strip, max_vertices = 4) out;
+
+//in vec3 in_Position;
+in VertexData  {
+  vec2 radius;
+  vec4 color;
+} data_in[];
+ 
+//out vec4 position_out;
+
+out FragmentData {
+  vec2 tex_coord;
+  vec4 color;
+} data_out;
+
+
+void main(void) {
+vec4 delta_x = vec4(data_in[0].radius.x, 0.0, 0.0, 0.0);
+vec4 delta_y = vec4(0.0, data_in[0].radius.y, 0.0, 0.0);
+ 
+for(int i = 0; i < gl_in.length(); i++)
+{
+    data_out.tex_coord = vec2(0.0, 0.0);
+    data_out.color = data_in[0].color;
+    gl_Position = gl_in[i].gl_Position - delta_x - delta_y;  
+    EmitVertex();
+
+    data_out.tex_coord = vec2(1.0, 0.0);
+    data_out.color = data_in[0].color;
+    gl_Position = gl_in[i].gl_Position + delta_x - delta_y;  
+    EmitVertex();
+
+    data_out.tex_coord = vec2(0.0, 1.0);
+    data_out.color = data_in[0].color;
+    gl_Position = gl_in[i].gl_Position - delta_x + delta_y;  
+    EmitVertex();
+
+    data_out.tex_coord = vec2(1.0, 1.0);
+    data_out.color = data_in[0].color;
+    gl_Position = gl_in[i].gl_Position + delta_x + delta_y;  
+    EmitVertex();
+}
+ 
+
+}
+
+
+)XXX";
+
+const std::string default_fs = R"XXX(
+		
+#version 400
+
+//precision highp float;
+
+in FragmentData {
+  vec2 tex_coord;
+  vec4 color;
+} data_in;
+
+layout(location = 0) out vec4 color; 
+
+void main(void) {
+    color = data_in.color*(1-1.8*(abs(data_in.tex_coord.x-0.5)));
+}
+)XXX";

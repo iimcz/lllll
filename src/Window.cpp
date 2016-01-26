@@ -13,38 +13,44 @@
 #include "ArtNetPacket.h"
 #include <random>
 #include <fstream>
+#include "GLProgram.h"
+//#include "GL/gl.h"
 
 namespace iim {
 
+#include "shaders.impl"
+
+#ifndef NDEBUG
+#define GL_CHECK_ERROR {GLuint glerr; if ((glerr=glGetError())) log[log_level::warning] << "OpenGL error: " << gluErrorString(glerr) << " at " << __FILE__ <<":"<< __LINE__;}
+#else
+#define GL_CHECK_ERROR
+#endif
+
+
 Window::Window(Log& log_, std::vector<std::string> args):
-		log(log_),col_count_(5),row_count_(17),led_count_(12),
-		dmx_max_(511), dmx_offset_(48),random_colors_(false)
+		log(log_)//,random_colors_(false)
+	,bg_color_{0, 0, 0, 255},vbo_{0}
 {
 	Json::Value root;
 	if (args.size() > 1) {
 		std::ifstream input(args[1]);
 		input >> root;
+	} else {
+		log[log_level::error] << "No configuration specified!";
+		throw std::runtime_error("No configuration specified");
 	}
-
-	col_count_ = get_nested_value_or_default(root, 5, "lights", "columns");
-	row_count_ = get_nested_value_or_default(root, 17, "lights", "rows");
-	led_count_ = get_nested_value_or_default(root, 12, "lights", "leds");
-	dmx_max_   = get_nested_value_or_default(root, 511, "lights", "dmx_max");
-	dmx_offset_= get_nested_value_or_default(root, 50, "lights", "dmx_offset");
-	random_colors_ = get_nested_value_or_default(root, false, "lights", "random");
-	new_universe_for_columns_ = get_nested_value_or_default(root, true, "lights", "column_new_universe");
-
 	int width  = get_nested_value_or_default(root, 1920, "window", "size", "x");
 	int height = get_nested_value_or_default(root, 1080, "window", "size", "y");
 	bool fs    = get_nested_value_or_default(root, false, "window", "fullscreen");
-
-	auto led_size = dimensions_t{8, 4};
-	led_size.width = get_nested_value_or_default(root, led_size.width, "lights", "led_size", "width");
-	led_size.height= get_nested_value_or_default(root, led_size.height, "lights", "led_size", "height");
+	bg_color_.r = get_nested_value_or_default(root, 0, "window", "background", "r");
+	bg_color_.g = get_nested_value_or_default(root, 0, "window", "background", "g");
+	bg_color_.b = get_nested_value_or_default(root, 0, "window", "background", "b");
 
 	std::string address = get_nested_value_or_default(root, "0.0.0.0", "network", "address");
 	uint16_t port = get_nested_value_or_default(root, 6454, "network", "port");
 
+	scene_size_.width = get_nested_value_or_default(root, 1.0, "scene", "width");
+	scene_size_.height= get_nested_value_or_default(root, 1.0, "scene", "height");
 	socket_.bind(address, port);
 
 	SDL_version v;
@@ -60,52 +66,54 @@ Window::Window(Log& log_, std::vector<std::string> args):
 				SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 				width, height,
 					(fs?SDL_WINDOW_FULLSCREEN_DESKTOP:0) |
-					SDL_WINDOW_ALLOW_HIGHDPI),
+					SDL_WINDOW_ALLOW_HIGHDPI |
+					SDL_WINDOW_OPENGL),
 			[](SDL_Window*p){if(p) SDL_DestroyWindow(p);}};
-//	ctx_ = {SDL_GL_CreateContext(win_.get()),
-//			[](SDL_GLContext p){if(p) SDL_GL_DeleteContext(p);}
-//	};
-	renderer_ = {SDL_CreateRenderer(
-					win_.get(),
-					-1,
-					SDL_RENDERER_ACCELERATED),
-			[](SDL_Renderer*p){if(p) SDL_DestroyRenderer(p);}
+
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+
+	ctx_ = {SDL_GL_CreateContext(win_.get()),
+			[](SDL_GLContext p){if(p) SDL_GL_DeleteContext(p);}
 	};
-	SDL_RendererInfo rinfo;
-	SDL_GetRendererInfo(renderer_.get(), &rinfo);
-	log[log_level::info] << "Initialized 2D renderer " << rinfo.name << ", " << (rinfo.flags&SDL_RENDERER_ACCELERATED?"with":"without") << " HW acceleration";
+	if (!ctx_.get()) {
+		log[log_level::fatal] << "Failed to initialize OpenGL!";
+		throw std::runtime_error("Failed to initialize OpenGL");
+	}
+	{
+		auto gl_major = 0;
+		auto gl_minor = 0;
+		SDL_GL_GetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, &gl_major);
+		SDL_GL_GetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, &gl_minor);
+		log[log_level::info] << "Initialized OpenGL context, version " << gl_major << "." << gl_minor;
+	}
+	GL::init_gl();
+	glGenBuffers(1, &vbo_);
+	auto ggva = glGenVertexArrays;
+	if (!ggva) {
+		log[log_level::fatal] << "NO glGenVertexArrays!!!!!!!!!";
+	}
+	glGenVertexArrays(vbas_.size(), &vbas_[0]);
 
 	int w = 0, h = 0;
 	SDL_GetWindowSize(win_.get(), &w, &h);
 	log[log_level::info] << "Real window size " << w <<"x" << h;
-	const auto col_size = w / col_count_;
-	const auto col_offset = col_size / 2;
-	const auto row_size = h / row_count_;
 
-	int universe_num = 0;
-	int last_dmx = 0;
-	for (int x = 0; x < col_count_; ++x) {
-		if (new_universe_for_columns_ && last_dmx != 0) {
-			last_dmx = 0;
-			++universe_num;
+
+	const auto& json_lights = get_nested_element(root, "lights");
+	for (const auto& element: json_lights) {
+		auto new_light = Light::generate_light(element);
+		auto u = new_light->get_universe();
+		if (universes_.size() <= u) {
+			universes_.resize(u+1);
 		}
-		for (int i = 0; i < row_count_; ++i) {
-			auto pos = position_t {	col_offset + x * col_size - led_size.width / 2,
-									i * row_size};
-			auto spacing = position_t{	0,
-										row_size / led_count_};
-			lights_.emplace_back(pos, led_count_, led_size, spacing);
-			const auto light_num = i + x*row_count_;
-			log[log_level::info] << "Added light " << light_num << ", listening on universe " << universe_num << ", starting at address " << last_dmx;
-			universes_[universe_num].push_back({light_num, last_dmx});
-			last_dmx += dmx_offset_;
-			if (last_dmx + led_count_ * 4 > dmx_max_) {
-				++universe_num;
-				last_dmx = 0;
-			}
-		}
+		auto& lights_ = universes_.at(u);
+		lights_.emplace_back(std::move(new_light));
 	}
-	log[log_level::info] << "Generated " << lights_.size() << " lights";
+	const auto light_count = std::accumulate(universes_.cbegin(), universes_.cend(), size_t{0}, [](const auto& a, const auto& b){return a + b.size();});
+	const auto universe_count = universes_.size();
+	log[log_level::info] << "Generated " << light_count << " lights in " << universe_count << " universe" << (universe_count>1?"s":"");
 }
 
 bool Window::process_events()
@@ -123,8 +131,8 @@ bool Window::process_events()
 				} else if (event.key.keysym.sym == 'f') {
 //					window_fullscreen_ = !window_fullscreen_;
 //					SDL_SetWindowFullscreen(window_.get(), window_fullscreen_?SDL_WINDOW_FULLSCREEN_DESKTOP:0);
-				} else if (event.key.keysym.sym == 'r') {
-					random_colors_ = ! random_colors_;
+				/*}  else if (event.key.keysym.sym == 'r') {
+					random_colors_ = ! random_colors_;*/
 				} break;
 			case SDL_WINDOWEVENT:
 				switch (event.window.event) {
@@ -140,22 +148,66 @@ bool Window::process_events()
 int Window::run()
 {
 
-	std::random_device rand;
-	std::mt19937 gen(rand());
-	std::uniform_int_distribution<> distrib(0, lights_.size() -1 );
-	std::uniform_int_distribution<> distrib2(0, led_count_ - 1);
-	std::uniform_int_distribution<uint8_t> dist_col(0, 255);
+//	std::random_device rand;
+//	std::mt19937 gen(rand());
+//	std::uniform_int_distribution<> distrib(0, lights_.size() -1 );
+//	std::uniform_int_distribution<> distrib2(0, led_count_ - 1);
+//	std::uniform_int_distribution<uint8_t> dist_col(0, 255);
 
 	ArtNetPacket packet_;
 	std::vector<uint8_t> data;
 	data.reserve(530);
 
+	// Keep the buffer so we don;t have to realocate
+	std::vector<light_source_t> sources;
+	GLProgram prog(log);
+	prog.load_shader(GL_VERTEX_SHADER, default_vs);
+	prog.load_shader(GL_FRAGMENT_SHADER, default_fs);
+	prog.load_shader(GL_GEOMETRY_SHADER, default_gs);
+
+	prog.link();
+	prog.use();
+
+	for (const auto& universe: universes_) {
+		for (const auto& light: universe) {
+			light->render_points(sources);
+		}
+	}
+	glBindVertexArray(vbas_[0]);
+	GL_CHECK_ERROR
+	glBindBuffer(GL_ARRAY_BUFFER, vbo_);
+	GL_CHECK_ERROR
+
+	static_assert(std::is_standard_layout<light_source_t>::value, "Light source has to be standard layout");
+	log[log_level::info] << "Initializing buffer for " << sources.size() << " lights";
+	glBufferData(GL_ARRAY_BUFFER, sources.size() * sizeof(light_source_t), nullptr, GL_DYNAMIC_DRAW);
+	GL_CHECK_ERROR
+
+
+	glEnableVertexAttribArray(0);
+	GL_CHECK_ERROR
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(light_source_t), reinterpret_cast<GLvoid*>(offsetof(light_source_t, position)));
+	GL_CHECK_ERROR
+
+
+	glEnableVertexAttribArray(1);
+	GL_CHECK_ERROR
+	glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, sizeof(light_source_t), reinterpret_cast<GLvoid*>(offsetof(light_source_t, radius)));
+	GL_CHECK_ERROR
+
+
+	glVertexAttribPointer(2, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(light_source_t), reinterpret_cast<GLvoid*>(offsetof(light_source_t, color)));
+	glEnableVertexAttribArray(2);
+//
+	if (!prog.set_uniform_float("scene_width", scene_size_.width)) {
+		log[log_level::error] << "Failed to set scene size";
+	}
+	if (!prog.set_uniform_float("scene_height", scene_size_.height)) {
+		log[log_level::error] << "Failed to set scene size";
+	}
 	while(process_events())
 	{
-		SDL_SetRenderDrawColor( renderer_.get(), 0, 0, 0, 255 );
-		SDL_RenderClear(renderer_.get());
-
-		while (socket_.data_available(5)) {
+		while (socket_.data_available(15)) {
 			log[log_level::verbose] << "Data available!";
 			// Reusing the temporary buffer
 			data = socket_.receive<uint8_t>(std::move(data));
@@ -167,38 +219,37 @@ int Window::run()
 			auto universe = ArtNetPacket::get_universe(data);
 			log[log_level::verbose] << "Received data for universe: " << universe;
 
-			for (auto& addr: universes_[universe]) {
-				if (data.size() <= static_cast<size_t>((addr.second + header_size))) {
-					continue;
-				}
-				lights_[addr.first].set_from(&data[0] + addr.second + header_size, &data[0] + data.size());
-			}
 
 
 		}
 
+		glClearColor(bg_color_.r / 255.0f, bg_color_.g / 255.0f, bg_color_.b / 255.0f, bg_color_.intensity / 255.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
 
 
-		for (const auto& light: lights_) {
-			light.draw(*renderer_.get());
-		}
 
-		if (random_colors_) {
-			for (auto i = 0; i < 100; ++i) {
-				auto idx = distrib(gen);
-				auto idx2 = distrib2(gen);
-	//			log[log_level::info] << "modifying light " << idx << ", light " << idx2;
-				auto& col = lights_[idx][idx2];
-				col.r = dist_col(gen);
-				col.g = dist_col(gen);
-				col.b = dist_col(gen);
-				col.intensity = dist_col(gen);
+		sources.clear();
+		for (const auto& universe: universes_) {
+			for (const auto& light: universe) {
+				light->render_points(sources);
 			}
 		}
+		glBindVertexArray(vbas_[0]);
+		GL_CHECK_ERROR
+		glBindBuffer(GL_ARRAY_BUFFER, vbo_);
+		log[log_level::debug] << "Updating buffer with " << sources.size() << " lights";
+		glBufferSubData(GL_ARRAY_BUFFER, 0, sources.size() * sizeof(light_source_t), &sources[0]);
+		GL_CHECK_ERROR
 
 
+		glDisable(GL_CULL_FACE);
+		GL_CHECK_ERROR
+		glDrawArrays(GL_POINTS, 0, sources.size());
+		GL_CHECK_ERROR
 
-		SDL_RenderPresent(renderer_.get());
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		GL_CHECK_ERROR
+		SDL_GL_SwapWindow(win_.get());
 	}
 	return 0;
 }

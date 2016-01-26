@@ -13,7 +13,10 @@
 #include "utils.h"
 #include "Light.h"
 #include "Socket.h"
+#include "GLHelper.h"
 #include <SDL.h>
+#include <memory>
+
 
 namespace iim {
 
@@ -28,27 +31,19 @@ private:
 
 	Log log;
 	managed_resource<SDL_Window*> win_;
-	managed_resource<SDL_Renderer*> renderer_;
 	managed_resource<SDL_GLContext> ctx_;
 
-	std::vector<Light> lights_;
-	using address_t = std::pair<int, int>;
-//	// Maps [universe, channel] to [light number, channel]
-//	std::map<address_t, address_t> addresses_;
 
-	// Maps universe to a vector of [light_number, channel]
-	std::map<int, std::vector<address_t>> universes_;
+	using lights_t = std::vector<std::unique_ptr<Light>>;
+	std::vector<lights_t> universes_;
 
-	int32_t col_count_;
-	int32_t row_count_;
-	int32_t led_count_;
-
-	int32_t dmx_max_;
-	int32_t dmx_offset_;
-
-	bool random_colors_;
-	bool new_universe_for_columns_;
 	Socket socket_;
+
+	color_t bg_color_;
+
+	GLuint vbo_;
+	std::array<GLuint, 3> vbas_;
+	dimensions_t scene_size_;
 };
 
 }

@@ -217,8 +217,12 @@ int Window::run()
 				continue;
 			}
 			auto universe = ArtNetPacket::get_universe(data);
-			log[log_level::verbose] << "Received data for universe: " << universe;
-
+			log[log_level::info] << "Received data for universe: " << universe;
+			if (universe < universes_.size() && data.size() > header_size) {
+				for (auto& light: universes_[universe]) {
+					light->set_artnet(&data.front()+header_size, &data.back());
+				}
+			}
 
 
 		}

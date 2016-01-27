@@ -32,7 +32,7 @@ void Elar::render_points(std::vector<light_source_t>& sources) const
 	auto pos = position_;
 	for (const auto&led: leds_) {
 		// TODO: This is just a placeholder to get some data
-		sources.emplace_back(light_source_t{pos, 0.04, {255, 255, 255, dimmer_}});
+		sources.emplace_back(light_source_t{pos, 0.04, {led.r, led.g, led.b, 255}});
 		pos.y+=0.1;
 
 	}

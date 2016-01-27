@@ -30,6 +30,7 @@ private:
 	uint8_t mode_;
 	uint8_t dimmer_;
 	uint8_t flash_;
+	float length_;
 
 
 	std::array<color_t, 12> leds_;

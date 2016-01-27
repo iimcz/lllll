@@ -22,7 +22,8 @@ const bool elar_registered = Light::register_light("elar", [](const Json::Value&
 Elar::Elar(const Json::Value&root)
 :Light(root),
     mode_(get_nested_value_or_default(root, 0, "mode"))
-	,dimmer_(255),flash_(0)
+	,dimmer_(255),flash_(0),
+	length_(get_nested_value_or_default(root, 1.0, "length"))
 {
 
 }
@@ -30,10 +31,11 @@ Elar::Elar(const Json::Value&root)
 void Elar::render_points(std::vector<light_source_t>& sources) const
 {
 	auto pos = position_;
+	const auto len_delta = length_ / leds_.size();
 	for (const auto&led: leds_) {
 		// TODO: This is just a placeholder to get some data
-		sources.emplace_back(light_source_t{pos, 0.04, {led.r, led.g, led.b, 255}});
-		pos.y+=0.1;
+		sources.emplace_back(light_source_t{pos, len_delta, {led.r, led.g, led.b, 255}});
+		pos.y += len_delta;
 
 	}
 }

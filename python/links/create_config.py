@@ -71,7 +71,8 @@ if __name__ == '__main__':
                                       "universe": universe},
                            "position": {
                                         "x": x,
-                                        "y": y}
+                                        "y": y},
+                           "length": LIGHT_SIZE
                            })
             dmx = dmx + DMX_GAP
             if dmx + DMX_GAP > 510:

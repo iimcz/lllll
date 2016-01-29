@@ -25,6 +25,7 @@ COLUMN_GAP=5
 LIGHT_DOWN_GAP=1.3
 LIGHT_SIZE=1
 DMX_GAP=51
+LIGHT_WIDTH=1.5
 
 SCREEN_WIDTH=3840
 SCREEN_HEIGHT=2160
@@ -74,7 +75,8 @@ if __name__ == '__main__':
                            "position": {
                                         "x": x,
                                         "y": y},
-                           "length": LIGHT_SIZE
+                           "length": LIGHT_SIZE,
+                           "ratio": LIGHT_WIDTH
                            })
             dmx = dmx + DMX_GAP
             if dmx + DMX_GAP > 510:

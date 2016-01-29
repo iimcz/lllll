@@ -223,7 +223,7 @@ void Window::prepare_data()
 
 	glEnableVertexAttribArray(1);
 	GL_CHECK_ERROR
-	glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, sizeof(light_source_t), reinterpret_cast<GLvoid*>(offsetof(light_source_t, radius)));
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(light_source_t), reinterpret_cast<GLvoid*>(offsetof(light_source_t, radius_x)));
 	GL_CHECK_ERROR
 
 

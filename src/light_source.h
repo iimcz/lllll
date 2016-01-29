@@ -16,7 +16,8 @@ namespace iim {
 
 struct light_source_t {
 	position_t position;
-	float radius;
+	float radius_x;
+	float radius_y;
 	color_t color;
 };
 

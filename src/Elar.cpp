@@ -23,7 +23,8 @@ Elar::Elar(const Json::Value&root)
 :Light(root),
     mode_(get_nested_value_or_default(root, 0, "mode"))
 	,dimmer_(255),flash_(0),
-	length_(get_nested_value_or_default(root, 1.0, "length"))
+	length_(get_nested_value_or_default(root, 1.0, "length")),
+	width_ratio_(get_nested_value_or_default(root, 1.5, "ratio"))
 {
 
 }
@@ -48,7 +49,7 @@ void Elar::render_points(std::vector<light_source_t>& sources) const
 			mix(led.intensity, led.b, 0.7),
 			255
 		};
-		sources.emplace_back(light_source_t{pos, len_delta, color});
+		sources.emplace_back(light_source_t{pos, len_delta*width_ratio_, len_delta, color});
 		pos.y += len_delta;
 
 	}

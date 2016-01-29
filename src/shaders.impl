@@ -10,7 +10,7 @@ const std::string default_vs = R"XXX(
 #version 400
 
 layout(location = 0) in vec3 in_Position;
-layout(location = 1) in float in_Radius;
+layout(location = 1) in vec2 in_Radius;
 layout(location = 2) in vec4 in_color;
  
 uniform float scene_width = 1.0;
@@ -23,7 +23,7 @@ out VertexData {
 
 void main(void) {
     gl_Position = vec4(2*in_Position.x/scene_width, 2*in_Position.y/scene_height, 0.0, 1.0);
-    data_out.radius = vec2(2*in_Radius/scene_width, 2*in_Radius/scene_height);
+    data_out.radius = vec2(2*in_Radius.x/scene_width, 2*in_Radius.y/scene_height);
     data_out.color = in_color;
 }
 

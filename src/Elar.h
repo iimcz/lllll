@@ -31,6 +31,7 @@ private:
 	uint8_t dimmer_;
 	uint8_t flash_;
 	float length_;
+	float width_ratio_;
 
 
 	std::array<color_t, 12> leds_;

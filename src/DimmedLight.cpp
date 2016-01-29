@@ -29,7 +29,7 @@ DimmedLight::DimmedLight(const Json::Value&root)
 
 void DimmedLight::render_points(std::vector<light_source_t>& sources) const
 {
-	sources.emplace_back(light_source_t{position_, 0.815, {255, 255, 0, dimmer_}});
+	sources.emplace_back(light_source_t{position_, 0.815, 0.815, {255, 255, 0, dimmer_}});
 
 }
 

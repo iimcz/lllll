@@ -53,6 +53,7 @@ private:
 	std::unique_ptr<GLProgram> shader_;
 
 	size_t initialized_sources_count_;
+	bool transparent_;
 };
 
 }

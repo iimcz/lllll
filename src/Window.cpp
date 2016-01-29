@@ -26,7 +26,8 @@ namespace {
 Window::Window(Log& log_, std::vector<std::string> args):
 		log(log_)//,random_colors_(false)
 	,bg_color_{0, 0, 0, 255},vbo_{0},background_(log),
-	initialized_sources_count_(0)
+	initialized_sources_count_(0),
+	transparent_{false}
 {
 	Json::Value root;
 	if (args.size() > 1) {
@@ -42,6 +43,7 @@ Window::Window(Log& log_, std::vector<std::string> args):
 	bg_color_.r = get_nested_value_or_default(root, 0, "window", "background", "r");
 	bg_color_.g = get_nested_value_or_default(root, 0, "window", "background", "g");
 	bg_color_.b = get_nested_value_or_default(root, 0, "window", "background", "b");
+	transparent_= get_nested_value_or_default(root, false, "window", "transparent");
 
 	const std::string bg_filename = get_nested_value_or_default(root, std::string{}, "window", "background", "image");
 	std::string address = get_nested_value_or_default(root, "0.0.0.0", "network", "address");
@@ -49,6 +51,7 @@ Window::Window(Log& log_, std::vector<std::string> args):
 
 	scene_size_.width = get_nested_value_or_default(root, 1.0, "scene", "width");
 	scene_size_.height= get_nested_value_or_default(root, 1.0, "scene", "height");
+
 	socket_.bind(address, port);
 
 	SDL_version v;
@@ -177,7 +180,7 @@ void Window::render_lights()
 	glDisable(GL_DEPTH_TEST);
 //		glBlendFunc(GL_SRC_ALPHA,GL_ONE);
 	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glBlendFunc(GL_SRC_ALPHA,GL_ZERO);
+	glBlendFunc(GL_SRC_ALPHA, transparent_?GL_ONE_MINUS_SRC_ALPHA:GL_ZERO);
 	glDrawArrays(GL_POINTS, 0, sources_.size());
 	GL_CHECK_ERROR
 

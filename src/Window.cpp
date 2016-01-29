@@ -25,7 +25,8 @@ namespace {
 
 Window::Window(Log& log_, std::vector<std::string> args):
 		log(log_)//,random_colors_(false)
-	,bg_color_{0, 0, 0, 255},vbo_{0},background_(log)
+	,bg_color_{0, 0, 0, 255},vbo_{0},background_(log),
+	initialized_sources_count_(0)
 {
 	Json::Value root;
 	if (args.size() > 1) {
@@ -143,32 +144,63 @@ bool Window::process_events()
 	return true;
 }
 
-int Window::run()
+void Window::render_lights()
 {
+	sources_.clear();
+	for (const auto& universe: universes_) {
+		for (const auto& light: universe) {
+			light->render_points(sources_);
+		}
+	}
+	if (initialized_sources_count_ < sources_.size()) {
+		log[log_level::error] << "Received wrong number of sources...";
+		return;
+	}
 
-//	std::random_device rand;
-//	std::mt19937 gen(rand());
-//	std::uniform_int_distribution<> distrib(0, lights_.size() -1 );
-//	std::uniform_int_distribution<> distrib2(0, led_count_ - 1);
-//	std::uniform_int_distribution<uint8_t> dist_col(0, 255);
+	glClearColor(bg_color_.r / 255.0f, bg_color_.g / 255.0f, bg_color_.b / 255.0f, bg_color_.intensity / 255.0f);
+	glClear(GL_COLOR_BUFFER_BIT);
+	background_.draw_full_screen();
 
-	ArtNetPacket packet_;
-	std::vector<uint8_t> data;
-	data.reserve(530);
 
-	// Keep the buffer so we don;t have to realocate
-	std::vector<light_source_t> sources;
-	GLProgram prog(log);
-	prog.load_shader(GL_VERTEX_SHADER, default_vs);
-	prog.load_shader(GL_FRAGMENT_SHADER, default_fs);
-	prog.load_shader(GL_GEOMETRY_SHADER, default_gs);
 
-	prog.link();
-	prog.use();
+	glBindVertexArray(vbas_[0]);
+	GL_CHECK_ERROR
+	glBindBuffer(GL_ARRAY_BUFFER, vbo_);
+	log[log_level::debug] << "Updating buffer with " << sources_.size() << " lights";
+	glBufferSubData(GL_ARRAY_BUFFER, 0, sources_.size() * sizeof(light_source_t), &sources_[0]);
+	GL_CHECK_ERROR
+
+	shader_->use();
+	glDisable(GL_CULL_FACE);
+	GL_CHECK_ERROR
+	glEnable(GL_BLEND);
+	glDisable(GL_DEPTH_TEST);
+//		glBlendFunc(GL_SRC_ALPHA,GL_ONE);
+	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glBlendFunc(GL_SRC_ALPHA,GL_ZERO);
+	glDrawArrays(GL_POINTS, 0, sources_.size());
+	GL_CHECK_ERROR
+
+	glDisable(GL_BLEND);
+	shader_->stop();
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	GL_CHECK_ERROR
+	SDL_GL_SwapWindow(win_.get());
+}
+
+void Window::prepare_data()
+{
+	shader_ = std::make_unique<GLProgram>(log);
+	shader_->load_shader(GL_VERTEX_SHADER, default_vs);
+	shader_->load_shader(GL_FRAGMENT_SHADER, default_fs);
+	shader_->load_shader(GL_GEOMETRY_SHADER, default_gs);
+
+	shader_->link();
+	shader_->use();
 
 	for (const auto& universe: universes_) {
 		for (const auto& light: universe) {
-			light->render_points(sources);
+			light->render_points(sources_);
 		}
 	}
 	glBindVertexArray(vbas_[0]);
@@ -177,8 +209,9 @@ int Window::run()
 	GL_CHECK_ERROR
 
 	static_assert(std::is_standard_layout<light_source_t>::value, "Light source has to be standard layout");
-	log[log_level::info] << "Initializing buffer for " << sources.size() << " lights";
-	glBufferData(GL_ARRAY_BUFFER, sources.size() * sizeof(light_source_t), nullptr, GL_DYNAMIC_DRAW);
+	log[log_level::info] << "Initializing buffer for " << sources_.size() << " lights";
+	initialized_sources_count_ = sources_.size();
+	glBufferData(GL_ARRAY_BUFFER, sources_.size() * sizeof(light_source_t), nullptr, GL_DYNAMIC_DRAW);
 	GL_CHECK_ERROR
 
 
@@ -197,12 +230,19 @@ int Window::run()
 	glVertexAttribPointer(2, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(light_source_t), reinterpret_cast<GLvoid*>(offsetof(light_source_t, color)));
 	glEnableVertexAttribArray(2);
 //
-	if (!prog.set_uniform_float("scene_width", scene_size_.width)) {
+	if (!shader_->set_uniform_float("scene_width", scene_size_.width)) {
 		log[log_level::error] << "Failed to set scene size";
 	}
-	if (!prog.set_uniform_float("scene_height", scene_size_.height)) {
+	if (!shader_->set_uniform_float("scene_height", scene_size_.height)) {
 		log[log_level::error] << "Failed to set scene size";
 	}
+}
+int Window::run()
+{
+	std::vector<uint8_t> data;
+	data.reserve(530);
+
+
 	while(process_events())
 	{
 		while (socket_.data_available(15)) {
@@ -215,48 +255,15 @@ int Window::run()
 				continue;
 			}
 			auto universe = ArtNetPacket::get_universe(data);
-			log[log_level::info] << "Received data for universe: " << universe;
-			if (universe < universes_.size() && data.size() > header_size) {
+			log[log_level::verbose] << "Received data for universe: " << universe;
+			if (static_cast<size_t>(universe) < universes_.size() && data.size() > header_size) {
 				for (auto& light: universes_[universe]) {
 					light->set_artnet(&data.front()+header_size, &data.back());
 				}
 			}
-
-
 		}
 
-		glClearColor(bg_color_.r / 255.0f, bg_color_.g / 255.0f, bg_color_.b / 255.0f, bg_color_.intensity / 255.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
-		background_.draw_full_screen();
-
-
-		sources.clear();
-		for (const auto& universe: universes_) {
-			for (const auto& light: universe) {
-				light->render_points(sources);
-			}
-		}
-		glBindVertexArray(vbas_[0]);
-		GL_CHECK_ERROR
-		glBindBuffer(GL_ARRAY_BUFFER, vbo_);
-		log[log_level::debug] << "Updating buffer with " << sources.size() << " lights";
-		glBufferSubData(GL_ARRAY_BUFFER, 0, sources.size() * sizeof(light_source_t), &sources[0]);
-		GL_CHECK_ERROR
-
-		prog.use();
-		glDisable(GL_CULL_FACE);
-		GL_CHECK_ERROR
-		glEnable(GL_BLEND);
-		glDisable(GL_DEPTH_TEST);
-		glBlendFunc(GL_SRC_ALPHA,GL_ONE);
-		glDrawArrays(GL_POINTS, 0, sources.size());
-		GL_CHECK_ERROR
-
-		glDisable(GL_BLEND);
-		prog.stop();
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		GL_CHECK_ERROR
-		SDL_GL_SwapWindow(win_.get());
+		render_lights();
 	}
 	return 0;
 }

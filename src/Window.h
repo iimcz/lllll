@@ -29,6 +29,9 @@ public:
 	int run();
 private:
 	bool process_events();
+	void render_lights();
+	void prepare_data();
+
 
 	Log log;
 	managed_resource<SDL_Window*> win_;
@@ -46,6 +49,10 @@ private:
 	std::array<GLuint, 3> vbas_;
 	dimensions_t scene_size_;
 	Texture background_;
+	std::vector<light_source_t> sources_;
+	std::unique_ptr<GLProgram> shader_;
+
+	size_t initialized_sources_count_;
 };
 
 }

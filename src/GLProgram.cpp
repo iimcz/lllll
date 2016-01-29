@@ -125,6 +125,15 @@ bool GLProgram::set_uniform_float(std::string name, float value)
 	if (glGetError()) return false;
 	return true;
 }
+bool GLProgram::set_uniform_int(std::string name, int value)
+{
+	glGetError();
+	GLint loc = glGetUniformLocation(program,name.c_str());
+	if (loc <0) return false;
+	glUniform1i(loc,value);
+	if (glGetError()) return false;
+	return true;
+}
 //bool GLProgram::set_uniform_vec4(std::string name, const Vector4& value)
 //{
 //	glGetError();

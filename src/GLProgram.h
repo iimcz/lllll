@@ -30,6 +30,7 @@ public:
 //	void set_model_matrix(const Matrix4& matrix);
 //	void set_projection_matrix(const Matrix4 &matrix);
 	bool set_uniform_float(std::string name, float value);
+	bool set_uniform_int(std::string name, int value);
 //	bool set_uniform_vec4(std::string name, const Vector4& value);
 	GLuint native();
 protected:

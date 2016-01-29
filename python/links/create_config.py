@@ -38,7 +38,8 @@ cfg_root = {
                        "background": {
                                       "r": 0,
                                       "g": 25,
-                                      "b": 50
+                                      "b": 50,
+                                      "image": "bg.jpg"
                                       }
                        },
             "scene": {

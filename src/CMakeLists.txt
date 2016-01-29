@@ -4,6 +4,7 @@
 pkg_check_modules(SDL2 sdl2 REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(GLEW  REQUIRED)
+find_package(ImageMagick COMPONENTS Magick++ REQUIRED)
 
 add_executable(lllll
 			jsoncpp.cpp
@@ -19,11 +20,17 @@ add_executable(lllll
 			GLHelper.cpp GLHelper.h
 			GLShader.cpp GLShader.h
 			GLProgram.cpp GLProgram.h
-			
+			Texture.cpp Texture.h
 			Window.cpp Window.h
 						
 			)
 
-include_directories(${SDL2_INCLUDE_DIRS})			
-target_link_libraries(lllll ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES})
+include_directories(${SDL2_INCLUDE_DIRS} ${ImageMagick_Magick++_INCLUDE_DIR})
+			
+target_link_libraries(lllll 
+				${SDL2_LIBRARIES} 
+				${OPENGL_LIBRARIES} 
+				${GLEW_LIBRARIES} 
+				${ImageMagick_Magick++_LIBRARY}
+				)
 			

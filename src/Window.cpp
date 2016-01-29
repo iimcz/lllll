@@ -18,18 +18,14 @@
 
 namespace iim {
 
+namespace {
 #include "shaders.impl"
-
-#ifndef NDEBUG
-#define GL_CHECK_ERROR {GLuint glerr; if ((glerr=glGetError())) log[log_level::warning] << "OpenGL error: " << gluErrorString(glerr) << " at " << __FILE__ <<":"<< __LINE__;}
-#else
-#define GL_CHECK_ERROR
-#endif
+}
 
 
 Window::Window(Log& log_, std::vector<std::string> args):
 		log(log_)//,random_colors_(false)
-	,bg_color_{0, 0, 0, 255},vbo_{0}
+	,bg_color_{0, 0, 0, 255},vbo_{0},background_(log)
 {
 	Json::Value root;
 	if (args.size() > 1) {
@@ -46,6 +42,7 @@ Window::Window(Log& log_, std::vector<std::string> args):
 	bg_color_.g = get_nested_value_or_default(root, 0, "window", "background", "g");
 	bg_color_.b = get_nested_value_or_default(root, 0, "window", "background", "b");
 
+	const std::string bg_filename = get_nested_value_or_default(root, std::string{}, "window", "background", "image");
 	std::string address = get_nested_value_or_default(root, "0.0.0.0", "network", "address");
 	uint16_t port = get_nested_value_or_default(root, 6454, "network", "port");
 
@@ -100,6 +97,7 @@ Window::Window(Log& log_, std::vector<std::string> args):
 	SDL_GetWindowSize(win_.get(), &w, &h);
 	log[log_level::info] << "Real window size " << w <<"x" << h;
 
+	background_.load_image(bg_filename);
 
 	const auto& json_lights = get_nested_element(root, "lights");
 	for (const auto& element: json_lights) {
@@ -229,7 +227,7 @@ int Window::run()
 
 		glClearColor(bg_color_.r / 255.0f, bg_color_.g / 255.0f, bg_color_.b / 255.0f, bg_color_.intensity / 255.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
-
+		background_.draw_full_screen();
 
 
 		sources.clear();
@@ -245,12 +243,17 @@ int Window::run()
 		glBufferSubData(GL_ARRAY_BUFFER, 0, sources.size() * sizeof(light_source_t), &sources[0]);
 		GL_CHECK_ERROR
 
-
+		prog.use();
 		glDisable(GL_CULL_FACE);
 		GL_CHECK_ERROR
+		glEnable(GL_BLEND);
+		glDisable(GL_DEPTH_TEST);
+		glBlendFunc(GL_SRC_ALPHA,GL_ONE);
 		glDrawArrays(GL_POINTS, 0, sources.size());
 		GL_CHECK_ERROR
 
+		glDisable(GL_BLEND);
+		prog.stop();
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		GL_CHECK_ERROR
 		SDL_GL_SwapWindow(win_.get());

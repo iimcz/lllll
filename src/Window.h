@@ -14,6 +14,7 @@
 #include "Light.h"
 #include "Socket.h"
 #include "GLHelper.h"
+#include "Texture.h"
 #include <SDL.h>
 #include <memory>
 
@@ -44,6 +45,7 @@ private:
 	GLuint vbo_;
 	std::array<GLuint, 3> vbas_;
 	dimensions_t scene_size_;
+	Texture background_;
 };
 
 }

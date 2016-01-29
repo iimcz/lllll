@@ -28,13 +28,27 @@ Elar::Elar(const Json::Value&root)
 
 }
 
+namespace {
+// Ratio 0 => result = 1, ratio 1 => result = b
+template<typename T, typename R>
+constexpr T mix(T a, T b, R ratio) {
+	return 	  a * (R{1.0}-ratio)
+			+ b * ratio;
+}
+}
+
 void Elar::render_points(std::vector<light_source_t>& sources) const
 {
 	auto pos = position_;
 	const auto len_delta = length_ / leds_.size();
 	for (const auto&led: leds_) {
-		// TODO: This is just a placeholder to get some data
-		sources.emplace_back(light_source_t{pos, len_delta, {led.r, led.g, led.b, 255}});
+		const auto color = color_t{
+			mix(led.intensity, led.r, 0.7),
+			mix(led.intensity, led.g, 0.7),
+			mix(led.intensity, led.b, 0.7),
+			255
+		};
+		sources.emplace_back(light_source_t{pos, len_delta, color});
 		pos.y += len_delta;
 
 	}
@@ -64,7 +78,7 @@ void Elar::set_artnet(const uint8_t* start, const uint8_t* end)
 	{
 		const auto count_total = std::distance(start, end);
 		const auto& ch = get_channel();
-		if (count_total < ch) {
+		if (count_total < static_cast<decltype(count_total)>(ch)) {
 			return;
 		}
 		start += ch;
@@ -75,7 +89,7 @@ void Elar::set_artnet(const uint8_t* start, const uint8_t* end)
 	set_if_present(dimmer_, dimmer_channel, start, count);
 	set_if_present(flash_, 	flash_channel, start, count);
 
-	for (int i = 0u; i < leds_.size(); ++i) {
+	for (auto i = 0u; i < leds_.size(); ++i) {
 		auto& led = leds_[i];
 //		auto& col = led.color();
 		const auto channel = i * 4 + led_start_channel;

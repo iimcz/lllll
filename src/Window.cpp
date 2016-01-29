@@ -242,7 +242,7 @@ int Window::run()
 	std::vector<uint8_t> data;
 	data.reserve(530);
 
-
+	prepare_data();
 	while(process_events())
 	{
 		while (socket_.data_available(15)) {

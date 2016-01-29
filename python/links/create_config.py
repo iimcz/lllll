@@ -9,19 +9,20 @@ import json
 import sys
 
 # Width/height in meters
-WIDTH=25
-HEIGHT=25
+WIDTH=36.5
+HEIGHT=27
 
 COLUMNS=5
 LIGHTS_IN_COLUMN=17
 LIGHTS_GROUP=3
 #gap between lights in the same group
-LIGHT_GAP=1.1
+LIGHT_GAP=1.0
 #gap between light groups
-LIGHT_GROUP_GAP=0.3
+LIGHT_GROUP_GAP=0.35
 # gap between lights in a group
 COLUMN_GAP=5
-
+# Gap on the bottom
+LIGHT_DOWN_GAP=1.3
 LIGHT_SIZE=1
 DMX_GAP=51
 
@@ -54,7 +55,7 @@ cfg_root = {
 
 if __name__ == '__main__':
     x_0 = (1 - COLUMNS)*COLUMN_GAP/2
-    y_0 = (1 - LIGHTS_IN_COLUMN)*LIGHT_GAP/2 + (1 - int(LIGHTS_IN_COLUMN/LIGHTS_GROUP))*LIGHT_GROUP_GAP
+    y_0 = (1 - LIGHTS_IN_COLUMN)*LIGHT_GAP/2 + (1 - int(LIGHTS_IN_COLUMN/LIGHTS_GROUP))*LIGHT_GROUP_GAP + LIGHT_DOWN_GAP
     columns_x = [ x_0 + x * COLUMN_GAP for x in range(0, COLUMNS)]
     rows_y = [ y_0 + y * LIGHT_GAP + int(y/LIGHTS_GROUP) * LIGHT_GROUP_GAP for y in range(0, LIGHTS_IN_COLUMN)]
     #print('Columns',str(columns_x))

@@ -100,6 +100,8 @@ layout(location = 0) out vec4 color;
 
 void main(void) {
     float intensity = 1-1.8*(abs(data_in.tex_coord.x-0.5));
+    float light_max=(data_in.color.r, data_in.color.g, data_in.color.b);
+    //intensity = intensity * light_max;
     color = vec4(data_in.color.rgb, intensity);
 }
 )XXX";

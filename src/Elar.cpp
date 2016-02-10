@@ -9,6 +9,7 @@
 
 #include "Elar.h"
 #include "json_helpers.h"
+#include <limits>
 namespace iim {
 
 namespace {
@@ -30,23 +31,37 @@ Elar::Elar(const Json::Value&root)
 }
 
 namespace {
+template<typename T, typename T2>
+T clamp (T val, T2 minv, T2 maxv) {
+	if (val < minv) return minv;
+	if (val > maxv) return maxv;
+	return val;
+}
+
 // Ratio 0 => result = 1, ratio 1 => result = b
 template<typename T, typename R>
 constexpr T mix(T a, T b, R ratio) {
-	return 	  a * (R{1.0}-ratio)
-			+ b * ratio;
+	return 	  static_cast<T>(clamp(
+				a * (R{1.0}-ratio)
+				+ b * ratio,
+				0.01, 254.8));
+}
+template<typename T, T max_val = std::numeric_limits<T>::max(), typename R = float>
+constexpr T level(T value, T lev) {
+	return static_cast<T>(value * static_cast<R>(lev)/static_cast<R>(max_val));
 }
 }
 
 void Elar::render_points(std::vector<light_source_t>& sources) const
 {
 	auto pos = position_;
+	const uint8_t dimmer = dimmer_;
 	const auto len_delta = length_ / leds_.size();
 	for (const auto&led: leds_) {
 		const auto color = color_t{
-			mix(led.intensity, led.r, 0.7),
-			mix(led.intensity, led.g, 0.7),
-			mix(led.intensity, led.b, 0.7),
+			level(mix(led.intensity, led.r, 0.7), dimmer),
+			level(mix(led.intensity, led.g, 0.7), dimmer),
+			level(mix(led.intensity, led.b, 0.7), dimmer),
 			255
 		};
 		sources.emplace_back(light_source_t{pos, len_delta*width_ratio_, len_delta, color});

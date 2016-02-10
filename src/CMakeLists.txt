@@ -25,8 +25,8 @@ add_executable(lllll
 						
 			)
 
-include_directories(${SDL2_INCLUDE_DIRS} ${ImageMagick_Magick++_INCLUDE_DIR})
-			
+include_directories(${SDL2_INCLUDE_DIRS} ${ImageMagick_Magick++_INCLUDE_DIR} 
+		${ImageMagick_Magick++_ARCH_INCLUDE_DIR})
 target_link_libraries(lllll 
 				${SDL2_LIBRARIES} 
 				${OPENGL_LIBRARIES} 

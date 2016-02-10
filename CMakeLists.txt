@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 2.8.10)
-PROJECT(nekofeed CXX)
+PROJECT(nekofeed CXX C)
 
 
 INCLUDE(FindPkgConfig)

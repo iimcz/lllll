@@ -9,7 +9,7 @@
 
 #include "ArtNetPacket.h"
 #include <array>
-
+#include <iostream>
 namespace iim {
 
 namespace {
@@ -91,13 +91,16 @@ bool ArtNetPacket::validate_packet(const std::vector<uint8_t>& data)
 	if (data.size() < header_size) return false;
 	if (!std::equal(data.cbegin(), data.cbegin()+8, default_artnet_header.cbegin())) return false;
 	const auto size = read_from_header_16(data, length_offset);
+//	std::cout << "Size: " << size << "\n";
 	if (data.size() < static_cast<size_t>(header_size + size)) return false;
 
 	return true;
 }
 int16_t ArtNetPacket::get_universe(const std::vector<uint8_t>& data)
 {
-	return read_from_header_16(data, universe_offset);
+	return	static_cast<int16_t>(data[universe_offset]) |
+			static_cast<int16_t>(data[universe_offset+1] & 0x7F)<<8;
+	//return read_from_header_16(data, universe_offset);
 }
 
 }

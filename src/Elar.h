@@ -32,7 +32,7 @@ private:
 	uint8_t flash_;
 	float length_;
 	float width_ratio_;
-
+	float white_ratio_;
 
 	std::array<color_t, 12> leds_;
 };

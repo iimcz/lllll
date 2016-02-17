@@ -25,7 +25,8 @@ Elar::Elar(const Json::Value&root)
     mode_(get_nested_value_or_default(root, 0, "mode"))
 	,dimmer_(255),flash_(0),
 	length_(get_nested_value_or_default(root, 1.0, "length")),
-	width_ratio_(get_nested_value_or_default(root, 1.5, "ratio"))
+	width_ratio_(get_nested_value_or_default(root, 1.5, "ratio")),
+	white_ratio_(get_nested_value_or_default(root, 0.5, "white_ratio"))
 {
 
 }
@@ -59,9 +60,9 @@ void Elar::render_points(std::vector<light_source_t>& sources) const
 	const auto len_delta = length_ / leds_.size();
 	for (const auto&led: leds_) {
 		const auto color = color_t{
-			level(mix(led.intensity, led.r, 0.7), dimmer),
-			level(mix(led.intensity, led.g, 0.7), dimmer),
-			level(mix(led.intensity, led.b, 0.7), dimmer),
+			level(mix(led.intensity, led.r, white_ratio_), dimmer),
+			level(mix(led.intensity, led.g, white_ratio_), dimmer),
+			level(mix(led.intensity, led.b, white_ratio_), dimmer),
 			255
 		};
 		sources.emplace_back(light_source_t{pos, len_delta*width_ratio_, len_delta, color});

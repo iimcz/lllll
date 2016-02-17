@@ -10,6 +10,7 @@
 #include "Elar.h"
 #include "json_helpers.h"
 #include <limits>
+#include <cmath>
 namespace iim {
 
 namespace {
@@ -17,6 +18,8 @@ namespace {
 const bool elar_registered = Light::register_light("elar", [](const Json::Value& root){
 	return  std::make_unique<Elar>(root);
 });
+
+const double pi = std::acos(-1.0);
 
 }
 
@@ -26,7 +29,8 @@ Elar::Elar(const Json::Value&root)
 	,dimmer_(255),flash_(0),
 	length_(get_nested_value_or_default(root, 1.0, "length")),
 	width_ratio_(get_nested_value_or_default(root, 1.5, "ratio")),
-	white_ratio_(get_nested_value_or_default(root, 0.5, "white_ratio"))
+	white_ratio_(get_nested_value_or_default(root, 0.5, "white_ratio")),
+	orientation_(get_nested_value_or_default(root, 0, "orientation"))
 {
 
 }
@@ -58,6 +62,8 @@ void Elar::render_points(std::vector<light_source_t>& sources) const
 	auto pos = position_;
 	const uint8_t dimmer = dimmer_;
 	const auto len_delta = length_ / leds_.size();
+	const auto delta_x = len_delta * std::sin(orientation_ * pi / 180.0);
+	const auto delta_y = len_delta * std::cos(orientation_ * pi / 180.0);
 	for (const auto&led: leds_) {
 		const auto color = color_t{
 			level(mix(led.intensity, led.r, white_ratio_), dimmer),
@@ -66,7 +72,8 @@ void Elar::render_points(std::vector<light_source_t>& sources) const
 			255
 		};
 		sources.emplace_back(light_source_t{pos, len_delta*width_ratio_, len_delta, color});
-		pos.y += len_delta;
+		pos.y += delta_y;
+		pos.x += delta_x;
 
 	}
 }

@@ -33,6 +33,7 @@ private:
 	float length_;
 	float width_ratio_;
 	float white_ratio_;
+	float orientation_;
 
 	std::array<color_t, 12> leds_;
 };

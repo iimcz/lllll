@@ -30,6 +30,9 @@ LIGHT_WIDTH=1.5
 SCREEN_WIDTH=3840
 SCREEN_HEIGHT=2160
 
+START_FROM_TOP = True
+# offset for first group (effectively, how many light are missing from first group)
+GROUP_OFFSET=1
 cfg_root = {
             "window": {
                        "fullscreen": False,
@@ -56,9 +59,17 @@ cfg_root = {
 
 if __name__ == '__main__':
     x_0 = (1 - COLUMNS)*COLUMN_GAP/2
-    y_0 = (1 - LIGHTS_IN_COLUMN)*LIGHT_GAP/2 + (1 - int(LIGHTS_IN_COLUMN/LIGHTS_GROUP))*LIGHT_GROUP_GAP + LIGHT_DOWN_GAP
     columns_x = [ x_0 + x * COLUMN_GAP for x in range(0, COLUMNS)]
-    rows_y = [ y_0 + y * LIGHT_GAP + int(y/LIGHTS_GROUP) * LIGHT_GROUP_GAP for y in range(0, LIGHTS_IN_COLUMN)]
+    if not START_FROM_TOP:
+        y_0 = (1 - LIGHTS_IN_COLUMN)*LIGHT_GAP/2 + (1 - int(LIGHTS_IN_COLUMN/LIGHTS_GROUP))*LIGHT_GROUP_GAP + LIGHT_DOWN_GAP
+        rows_y = [ y_0 + y * LIGHT_GAP + int((y + GROUP_OFFSET)/LIGHTS_GROUP) * LIGHT_GROUP_GAP for y in range(0, LIGHTS_IN_COLUMN)]
+        orientation = 0
+    else:
+        y_0 = (LIGHTS_IN_COLUMN - 1)*LIGHT_GAP/2 + (int(LIGHTS_IN_COLUMN/LIGHTS_GROUP) - 1)*LIGHT_GROUP_GAP + LIGHT_DOWN_GAP
+        rows_y = [ y_0 - y * LIGHT_GAP - int((y + GROUP_OFFSET)/LIGHTS_GROUP) * LIGHT_GROUP_GAP for y in range(0, LIGHTS_IN_COLUMN)]
+        orientation = 180
+    
+    
     #print('Columns',str(columns_x))
     #print('Rows',str(rows_y))
     
@@ -76,7 +87,8 @@ if __name__ == '__main__':
                                         "x": x,
                                         "y": y},
                            "length": LIGHT_SIZE,
-                           "ratio": LIGHT_WIDTH
+                           "ratio": LIGHT_WIDTH,
+                           "orientation": orientation
                            })
             dmx = dmx + DMX_GAP
             if dmx + DMX_GAP > 510:
